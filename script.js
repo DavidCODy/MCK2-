@@ -1,26 +1,95 @@
-const STORAGE_KEY = 'training_msk2_records';
-const ADMIN_PASSWORD = 'admin123'; // смените на свой
-
+const ADMIN_PASSWORD = 'admin123';
 let records = [];
 let isAdmin = false;
 
-// ---------- ЗАГРУЗКА / СОХРАНЕНИЕ ----------
-function loadData() {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-        try { records = JSON.parse(stored); } catch(e) { records = []; }
-    } else {
-        // демо-записи для первого запуска
-        records = [
-            { wine: "AFI Воронцовский", employee: "Простосердова Александра Дмитриевна", event: "Дегустация Bordeaux", type: "Дегустация", status: "Пройдено", date: new Date().toLocaleDateString() },
-            { wine: "Sky House", employee: "Емелин Станислав", event: "Тренинг по скриптам", type: "Тренинг по продажам", status: "Запланировано", date: new Date().toLocaleDateString() }
-        ];
-        saveData();
-    }
+// ---------- ЗАГРУЗКА ДАННЫХ ИЗ FIRESTORE ----------
+function loadDataFromFirestore() {
+    db.collection('records')
+        .orderBy('rawDate', 'desc') // сортировка по дате (новые сверху)
+        .onSnapshot((snapshot) => {
+            records = [];
+            snapshot.forEach((doc) => {
+                const data = doc.data();
+                data.id = doc.id; // сохраняем ID для обновлений
+                records.push(data);
+            });
+            renderAll();
+        }, (error) => {
+            console.error("Ошибка загрузки: ", error);
+            alert('Не удалось загрузить данные. Проверьте интернет и настройки Firebase.');
+        });
 }
 
-function saveData() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+// ---------- ДОБАВЛЕНИЕ ЗАПИСИ ----------
+function addRecord() {
+    const wine = document.getElementById('wineSelect').value;
+    const employee = document.getElementById('employeeSelect').value;
+    const eventName = document.getElementById('eventInput').value.trim();
+    const type = document.getElementById('typeSelect').value;
+    const status = document.getElementById('statusSelect').value;
+    const dateValue = document.getElementById('dateInput').value;
+
+    if (!wine || !employee || !eventName) {
+        alert('Заполните все поля: Винотека, Сотрудник, Мероприятие');
+        return;
+    }
+
+    let displayDate;
+    if (dateValue) {
+        const parts = dateValue.split('-');
+        displayDate = `${parts[2]}.${parts[1]}.${parts[0]}`;
+    } else {
+        displayDate = new Date().toLocaleDateString();
+    }
+
+    const newRecord = {
+        wine,
+        employee,
+        event: eventName,
+        type,
+        status,
+        date: displayDate,
+        rawDate: dateValue || new Date().toISOString().split('T')[0],
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
+
+    db.collection('records').add(newRecord)
+        .then(() => {
+            document.getElementById('eventInput').value = '';
+            // document.getElementById('dateInput').value = ''; // можно сбросить
+        })
+        .catch((error) => {
+            console.error("Ошибка добавления: ", error);
+            alert('Не удалось сохранить запись.');
+        });
+}
+
+// ---------- ИЗМЕНЕНИЕ СТАТУСА ----------
+function changeStatus(index, newStatus) {
+    const record = records[index];
+    if (!record) return;
+    db.collection('records').doc(record.id).update({ status: newStatus })
+        .catch((error) => {
+            console.error("Ошибка обновления статуса: ", error);
+            alert('Не удалось изменить статус.');
+        });
+}
+
+// ---------- УДАЛЕНИЕ (только админ) ----------
+function deleteRecord(index) {
+    if (!isAdmin) {
+        document.getElementById('adminStatus').textContent = '❌ Требуется авторизация администратора!';
+        return;
+    }
+    const record = records[index];
+    if (!record) return;
+    if (confirm('Удалить запись?')) {
+        db.collection('records').doc(record.id).delete()
+            .catch((error) => {
+                console.error("Ошибка удаления: ", error);
+                alert('Не удалось удалить запись.');
+            });
+    }
 }
 
 // ---------- ОТРИСОВКА SELECT'ОВ ----------
@@ -49,7 +118,6 @@ function renderSelects() {
         }
     });
 
-    // Фильтр статистики
     const filterWine = document.getElementById('filterWine');
     filterWine.innerHTML = '<option value="__all">🌐 Все винотеки (территория)</option>';
     WINERIES.forEach(w => {
@@ -59,71 +127,6 @@ function renderSelects() {
         filterWine.appendChild(opt);
     });
     filterWine.addEventListener('change', updateStats);
-}
-
-// ---------- ДОБАВЛЕНИЕ ЗАПИСИ ----------
-function addRecord() {
-    const wine = document.getElementById('wineSelect').value;
-    const employee = document.getElementById('employeeSelect').value;
-    const eventName = document.getElementById('eventInput').value.trim();
-    const type = document.getElementById('typeSelect').value;
-    const status = document.getElementById('statusSelect').value;
-    const dateValue = document.getElementById('dateInput').value; // строка YYYY-MM-DD
-
-    if (!wine || !employee || !eventName) {
-        alert('Заполните все поля: Винотека, Сотрудник, Мероприятие');
-        return;
-    }
-
-    // Если дата не выбрана – используем сегодняшнюю
-    let displayDate;
-    if (dateValue) {
-        // Преобразуем YYYY-MM-DD в локальный формат (например, DD.MM.YYYY)
-        const parts = dateValue.split('-');
-        displayDate = `${parts[2]}.${parts[1]}.${parts[0]}`;
-    } else {
-        displayDate = new Date().toLocaleDateString();
-    }
-
-    const newRecord = {
-        wine,
-        employee,
-        event: eventName,
-        type,
-        status,
-        date: displayDate,
-        // сохраняем также исходную дату для сортировки (опционально)
-        rawDate: dateValue || new Date().toISOString().split('T')[0]
-    };
-    records.push(newRecord);
-    saveData();
-
-    // Очищаем поля (кроме даты – оставляем как есть или сбрасываем)
-    document.getElementById('eventInput').value = '';
-    // Можно сбросить дату:
-    // document.getElementById('dateInput').value = '';
-    renderAll();
-}
-// ---------- ИЗМЕНЕНИЕ СТАТУСА ----------
-function changeStatus(index, newStatus) {
-    if (index >= 0 && index < records.length) {
-        records[index].status = newStatus;
-        saveData();
-        renderAll();
-    }
-}
-
-// ---------- УДАЛЕНИЕ (только админ) ----------
-function deleteRecord(index) {
-    if (!isAdmin) {
-        document.getElementById('adminStatus').textContent = '❌ Требуется авторизация администратора!';
-        return;
-    }
-    if (confirm('Удалить запись?')) {
-        records.splice(index, 1);
-        saveData();
-        renderAll();
-    }
 }
 
 // ---------- ОБНОВЛЕНИЕ ТАБЛИЦЫ (ГЛАВНАЯ) ----------
@@ -140,7 +143,6 @@ function renderTable() {
         if (r.status === 'Пройдено') badgeClass = 'badge-green';
         else if (r.status === 'Пропущено') badgeClass = 'badge-red';
 
-        // Проверка на обязательное мероприятие
         const reqInfo = getRequiredEventInfo(r.event);
         let reqCell = '';
         if (reqInfo.isRequired && r.status === 'Пройдено') {
@@ -304,7 +306,9 @@ function initTabs() {
             this.classList.add('active');
             contents.forEach(c => c.classList.remove('active'));
             document.getElementById(target).classList.add('active');
-            renderAll();
+            // При переключении обновляем только статистику и обязательные таблицы,
+            // но records уже загружены, renderAll вызывается автоматически при изменениях
+            // Однако для ручного обновления можно вызвать renderAll(), но это не обязательно
         });
     });
 }
@@ -319,10 +323,10 @@ function renderAll() {
 
 // ---------- ЗАПУСК ----------
 document.addEventListener('DOMContentLoaded', function() {
-    loadData();
     renderSelects();
-    renderAll();
     initTabs();
+    document.getElementById('filterWine').value = '__all';
+    loadDataFromFirestore();
 
     document.getElementById('addBtn').addEventListener('click', addRecord);
     document.getElementById('adminLoginBtn').addEventListener('click', adminLogin);
@@ -331,8 +335,4 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('eventInput').addEventListener('keydown', function(e) {
         if (e.key === 'Enter') addRecord();
     });
-
-    // Устанавливаем фильтр по умолчанию
-    document.getElementById('filterWine').value = '__all';
-    updateStats();
 });

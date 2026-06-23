@@ -10,10 +10,9 @@
 <div class="container">
     <header>
         <h1>📚 МСК2 обучение</h1>
-        <p class="subtitle">Учёт участия в дегустациях, тренингах и аттестациях</p>
+        <p class="subtitle">Учёт участия в дегустациях, тренингах и аттестациях · 100% прохождение для аттестации</p>
     </header>
 
-    <!-- Вкладки -->
     <div class="tabs">
         <button class="tab-btn active" data-tab="tab1">📋 Все записи</button>
         <button class="tab-btn" data-tab="tab2">📊 Статистика</button>
@@ -21,7 +20,7 @@
         <button class="tab-btn" data-tab="tab4">📋 Обязательные мероприятия</button>
     </div>
 
-    <!-- ========== ВКЛАДКА 1 ========== -->
+    <!-- Вкладка 1 -->
     <div id="tab1" class="tab-content active">
         <div class="card">
             <h2>➕ Добавить участие</h2>
@@ -56,9 +55,9 @@
                     </select>
                 </div>
                 <div>
-    <label>Дата мероприятия</label>
-    <input type="date" id="dateInput">
-</div>
+                    <label>Дата мероприятия</label>
+                    <input type="date" id="dateInput">
+                </div>
             </div>
             <button class="btn" id="addBtn">➕ Добавить запись</button>
         </div>
@@ -80,14 +79,14 @@
                         </tr>
                     </thead>
                     <tbody id="recordsBody">
-                        <tr><td colspan="8" class="text-center">Нет записей</td></tr>
+                        <tr><td colspan="8" class="text-center">Загрузка...</td></tr>
                     </tbody>
                 </table>
             </div>
         </div>
     </div>
 
-    <!-- ========== ВКЛАДКА 2 ========== -->
+    <!-- Вкладка 2 -->
     <div id="tab2" class="tab-content">
         <div class="card">
             <h2>📊 Статистика</h2>
@@ -110,7 +109,7 @@
         </div>
     </div>
 
-    <!-- ========== ВКЛАДКА 3 ========== -->
+    <!-- Вкладка 3 -->
     <div id="tab3" class="tab-content">
         <div class="card">
             <h2>🔐 Администрирование</h2>
@@ -145,7 +144,7 @@
         </div>
     </div>
 
-    <!-- ========== ВКЛАДКА 4 ========== -->
+    <!-- Вкладка 4 -->
     <div id="tab4" class="tab-content">
         <div class="card">
             <h2>📋 Обязательные мероприятия для аттестации</h2>
@@ -168,6 +167,27 @@
         </div>
     </div>
 </div>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+<script>
+    // ===== ВСТАВЬТЕ ВАШУ КОНФИГУРАЦИЮ FIREBASE ЗДЕСЬ =====
+    const firebaseConfig = {
+  apiKey: "AIzaSyBozj2JlsqmzMUpM7a8B-fbr6zMxTfRVec",
+  authDomain: "msk2-training.firebaseapp.com",
+  projectId: "msk2-training",
+  storageBucket: "msk2-training.firebasestorage.app",
+  messagingSenderId: "573704808670",
+  appId: "1:573704808670:web:87453d1515bb15ed4dfa4f",
+  measurementId: "G-4HTB3FCDNR"
+};
+    // =====================================================
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+</script>
 
 <script src="employees.js"></script>
 <script src="script.js"></script>
