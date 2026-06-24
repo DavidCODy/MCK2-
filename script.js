@@ -5,12 +5,12 @@ let isAdmin = false;
 // ---------- ЗАГРУЗКА ДАННЫХ ИЗ FIRESTORE ----------
 function loadDataFromFirestore() {
     db.collection('records')
-        .orderBy('rawDate', 'desc') // сортировка по дате (новые сверху)
+        .orderBy('rawDate', 'desc')
         .onSnapshot((snapshot) => {
             records = [];
             snapshot.forEach((doc) => {
                 const data = doc.data();
-                data.id = doc.id; // сохраняем ID для обновлений
+                data.id = doc.id;
                 records.push(data);
             });
             renderAll();
@@ -56,7 +56,6 @@ function addRecord() {
     db.collection('records').add(newRecord)
         .then(() => {
             document.getElementById('eventInput').value = '';
-            // document.getElementById('dateInput').value = ''; // можно сбросить
         })
         .catch((error) => {
             console.error("Ошибка добавления: ", error);
@@ -306,9 +305,6 @@ function initTabs() {
             this.classList.add('active');
             contents.forEach(c => c.classList.remove('active'));
             document.getElementById(target).classList.add('active');
-            // При переключении обновляем только статистику и обязательные таблицы,
-            // но records уже загружены, renderAll вызывается автоматически при изменениях
-            // Однако для ручного обновления можно вызвать renderAll(), но это не обязательно
         });
     });
 }
@@ -335,4 +331,5 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('eventInput').addEventListener('keydown', function(e) {
         if (e.key === 'Enter') addRecord();
     });
+});
 });
